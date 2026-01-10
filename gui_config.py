@@ -10,63 +10,78 @@ from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel,
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QLinearGradient, QColor, QPalette, QBrush
 
-# Определение путей
+# Пути к файлам
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.path.join(ROOT_DIR, "configs")
 CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
 CUSTOM_PATH = os.path.join(CONFIG_DIR, "custom.json")
+VERSION_PATH = os.path.join(ROOT_DIR, "version.json")
 
 os.makedirs(CONFIG_DIR, exist_ok=True)
 
+# Локализация интерфейса
 STRINGS = {
     "ru": {
-        "title": "Настройки Playlist Player",
+        "title": "Конфигурация плеера",
         "url_label": "Ссылка на плейлист YouTube",
-        "quality_label": "Качество аудио",
-        "vol_label": "Громкость",
-        "shuffle": "Перемешать",
-        "loop": "Повтор",
+        "quality_label": "Качество аудиопотока",
+        "vol_label": "Уровень громкости",
+        "shuffle": "Случайный порядок",
+        "loop": "Повтор плейлиста",
         "prefetch": "Предзагрузка",
-        "gapless": "Без пауз",
-        "loudnorm": "Нормализация",
-        "save": "СОХРАНИТЬ КОНФИГУРАЦИЮ",
-        "saved_msg": "КОНФИГУРАЦИЯ СОХРАНЕНА",
-        "custom_btn": "ДИЗАЙН"
+        "gapless": "Воспроизведение без пауз",
+        "loudnorm": "Нормализация звука",
+        "save": "СОХРАНИТЬ ПАРАМЕТРЫ",
+        "saved_msg": "КОНФИГУРАЦИЯ ОБНОВЛЕНА ✅",
+        "custom_btn": "ДИЗАЙН 🎨"
     },
     "en": {
-        "title": "Playlist Player Settings",
-        "url_label": "YouTube Playlist Link",
+        "title": "Player Configuration",
+        "url_label": "YouTube Playlist URL",
         "quality_label": "Audio Quality",
-        "vol_label": "Volume",
-        "shuffle": "Shuffle",
-        "loop": "Loop",
-        "prefetch": "Prefetch",
-        "gapless": "Gapless Audio",
-        "loudnorm": "Loudnorm",
+        "vol_label": "Volume Level",
+        "shuffle": "Shuffle Mode",
+        "loop": "Loop Playlist",
+        "prefetch": "Prefetching",
+        "gapless": "Gapless Playback",
+        "loudnorm": "Loudness Normalization",
         "save": "SAVE CONFIGURATION",
-        "saved_msg": "CONFIGURATION SAVED",
-        "custom_btn": "DESIGN"
+        "saved_msg": "CONFIGURATION UPDATED ✅",
+        "custom_btn": "DESIGN 🎨"
     }
 }
+
+def get_version_info():
+    """Чтение данных о версии из локального JSON"""
+    try:
+        if os.path.exists(VERSION_PATH):
+            with open(VERSION_PATH, 'r') as f:
+                d = json.load(f)
+                v = d.get('version', '?.?')
+                p = d.get('versionpreview', 'Stable')
+                t = d.get('versiontype', 'standard')
+                return f"v{v} | {p} ({t})"
+    except: pass
+    return "vUnknown | Data missing"
 
 class ModernConfigApp(QWidget):
     def __init__(self):
         super().__init__()
-        # Исправленное определение системного языка
         try:
             sys_lang = locale.getlocale()[0][:2]
-        except:
-            sys_lang = "en"
-        self.lang = sys_lang if sys_lang in STRINGS else "en"
+        except: sys_lang = "en"
+        self.lang = sys_lang if sys_lang in ["ru", "en"] else "en"
 
-        self.color1 = QColor("#1e1e2e")
-        self.color2 = QColor("#5865f2")
+        # Начальные цвета (если нет кастомных)
+        self.color1 = QColor("#11111b")
+        self.color2 = QColor("#313244")
         self.anim_speed = 0
         self.anim_step = 0.0
         
-        self.setWindowTitle("Playlist Player Config")
-        self.setFixedSize(500, 680)
-        
+        self.setWindowTitle("Playlist Player Settings")
+        self.setFixedSize(520, 700)
+        self.setWindowOpacity(0.94) # Установка прозрачности окна
+
         self.load_custom_config()
         self.init_ui()
         self.load_settings()
@@ -82,8 +97,8 @@ class ModernConfigApp(QWidget):
             try:
                 with open(CUSTOM_PATH, 'r') as f:
                     c = json.load(f)
-                    self.color1 = QColor(c.get("color1", "#1e1e2e"))
-                    self.color2 = QColor(c.get("color2", "#5865f2"))
+                    self.color1 = QColor(c.get("color1", "#11111b"))
+                    self.color2 = QColor(c.get("color2", "#313244"))
                     self.anim_speed = c.get("speed", 0)
             except: pass
 
@@ -96,7 +111,7 @@ class ModernConfigApp(QWidget):
         self.anim_step += self.anim_speed / 500
         if self.anim_step > 1.0: self.anim_step = 0
         factor = (math.sin(self.anim_step * 2 * math.pi) + 1) / 2
-        grad = QLinearGradient(0, 0, 500, 680)
+        grad = QLinearGradient(0, 0, 520, 700)
         grad.setColorAt(0, self.color1)
         grad.setColorAt(factor, self.color2)
         grad.setColorAt(1, self.color1)
@@ -107,36 +122,39 @@ class ModernConfigApp(QWidget):
     def init_ui(self):
         self.setAutoFillBackground(True)
         self.main_layout = QVBoxLayout()
-        self.main_layout.setContentsMargins(35, 20, 35, 10)
-        self.main_layout.setSpacing(10)
+        self.main_layout.setContentsMargins(35, 25, 35, 15)
+        self.main_layout.setSpacing(12)
 
+        # Верхняя панель управления
         top_bar = QHBoxLayout()
         self.lang_combo = QComboBox()
         self.lang_combo.addItems(["Русский", "English"])
         self.lang_combo.currentIndexChanged.connect(self.change_lang)
-        self.lang_combo.setStyleSheet("background: rgba(255,255,255,0.1); color: white; border-radius: 5px;")
+        self.lang_combo.setStyleSheet("background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;")
         
         self.custom_btn = QPushButton()
         self.custom_btn.clicked.connect(self.show_design_dialog)
-        self.custom_btn.setStyleSheet("background: rgba(255,255,255,0.2); color: white; border-radius: 5px; padding: 5px 15px;")
+        self.custom_btn.setStyleSheet("background: rgba(255,255,255,0.1); color: white; border-radius: 4px; padding: 5px 15px;")
         
         top_bar.addWidget(self.lang_combo); top_bar.addStretch(); top_bar.addWidget(self.custom_btn)
         self.main_layout.addLayout(top_bar)
 
+        # Заголовок
         self.title_label = QLabel("Playlist Player")
-        self.title_label.setStyleSheet("font-size: 26px; font-weight: bold; color: white; margin: 15px 0;")
+        self.title_label.setStyleSheet("font-size: 26px; font-weight: bold; color: white; margin-bottom: 10px;")
         self.main_layout.addWidget(self.title_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
+        # Поля ввода и настройки
         self.l_url = QLabel(); self.main_layout.addWidget(self.l_url)
         self.url_input = QLineEdit()
-        self.url_input.setStyleSheet("background: rgba(0,0,0,0.4); border-radius: 8px; padding: 12px; color: white; border: 1px solid #5865f2;")
+        self.url_input.setStyleSheet("background: rgba(0,0,0,0.3); border-radius: 6px; padding: 12px; color: white; border: 1px solid rgba(88,101,242, 0.4);")
         self.main_layout.addWidget(self.url_input)
 
         self.l_qual = QLabel(); self.main_layout.addWidget(self.l_qual)
         self.quality_combo = QComboBox()
         self.quality_map = {"Best": "bestaudio", "Balanced": "bestaudio[abr<=192]", "Potato": "worstaudio"}
         self.quality_combo.addItems(self.quality_map.keys())
-        self.quality_combo.setStyleSheet("background: rgba(0,0,0,0.3); color: white; padding: 8px; border-radius: 5px;")
+        self.quality_combo.setStyleSheet("background: rgba(0,0,0,0.2); color: white; padding: 8px; border-radius: 5px;")
         self.main_layout.addWidget(self.quality_combo)
 
         self.vol_text = QLabel(); self.main_layout.addWidget(self.vol_text)
@@ -145,33 +163,46 @@ class ModernConfigApp(QWidget):
         self.vol_slider.valueChanged.connect(self.update_vol_label)
         self.main_layout.addWidget(self.vol_slider)
 
+        # Сетка чекбоксов
         grid = QGridLayout()
         self.shuffle_cb = QCheckBox(); self.loop_cb = QCheckBox()
         self.prefetch_cb = QCheckBox(); self.gapless_cb = QCheckBox(); self.norm_cb = QCheckBox()
         self.cbs = [self.shuffle_cb, self.loop_cb, self.prefetch_cb, self.gapless_cb, self.norm_cb]
         for i, cb in enumerate(self.cbs):
-            cb.setStyleSheet("color: white; font-size: 14px;")
+            cb.setStyleSheet("color: white; font-size: 13px;")
             grid.addWidget(cb, i // 2, i % 2)
         self.main_layout.addLayout(grid)
 
+        # Кнопка сохранения
         self.save_btn = QPushButton()
         self.save_btn.clicked.connect(self.save_settings)
-        self.save_btn.setStyleSheet("background: #2ecc71; color: white; font-weight: bold; padding: 18px; border-radius: 12px; margin-top: 20px;")
+        self.save_btn.setStyleSheet("background: #2ecc71; color: white; font-weight: bold; padding: 18px; border-radius: 10px; margin-top: 20px;")
         self.main_layout.addWidget(self.save_btn)
 
         self.main_layout.addStretch()
-        self.footer = QLabel('<a href="https://github.com/andrew1284prod/playlistplayer" style="color: rgba(255, 255, 255, 0.4); text-decoration: none;">By andrew1284prod</a>')
-        self.footer.setOpenExternalLinks(True)
-        self.footer.setStyleSheet("font-size: 11px; font-style: italic; margin-top: 10px;")
-        self.main_layout.addWidget(self.footer, alignment=Qt.AlignmentFlag.AlignLeft)
 
+        # Футер (Автор слева, Версия справа)
+        footer_layout = QHBoxLayout()
+        
+        self.footer_left = QLabel('<a href="https://github.com/andrew1284prod/playlistplayer" style="color: rgba(255, 255, 255, 0.4); text-decoration: none;">By andrew1284prod</a>')
+        self.footer_left.setOpenExternalLinks(True)
+        self.footer_left.setStyleSheet("font-size: 10px; font-style: italic;")
+        
+        self.footer_right = QLabel(get_version_info())
+        self.footer_right.setStyleSheet("color: rgba(255, 255, 255, 0.3); font-size: 10px;")
+        
+        footer_layout.addWidget(self.footer_left)
+        footer_layout.addStretch()
+        footer_layout.addWidget(self.footer_right)
+        
+        self.main_layout.addLayout(footer_layout)
         self.setLayout(self.main_layout)
 
     def show_design_dialog(self):
         d = QDialog(self)
         d.setWindowTitle("Design Settings")
         d.setFixedSize(300, 250)
-        d.setStyleSheet("background: #232323; color: white;")
+        d.setStyleSheet("background: #181825; color: white;")
         layout = QVBoxLayout()
         btn_c1 = QPushButton(f"Color 1: {self.color1.name()}"); btn_c1.clicked.connect(lambda: self.pick_color(1, btn_c1))
         btn_c2 = QPushButton(f"Color 2: {self.color2.name()}"); btn_c2.clicked.connect(lambda: self.pick_color(2, btn_c2))
@@ -213,7 +244,8 @@ class ModernConfigApp(QWidget):
         if os.path.exists(CONFIG_PATH):
             try:
                 with open(CONFIG_PATH, 'r') as f:
-                    d = json.load(f); self.lang = d.get("lang", self.lang)
+                    d = json.load(f)
+                    self.lang = d.get("lang", self.lang)
                     self.lang_combo.setCurrentIndex(0 if self.lang == "ru" else 1)
                     self.url_input.setText(d.get("playlist_url", ""))
                     self.vol_slider.setValue(d.get("volume", 70))
