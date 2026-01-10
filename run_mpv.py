@@ -3,10 +3,8 @@ import json
 import subprocess
 import threading
 import time
-import sys
 import locale
 
-# Определение путей
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(ROOT_DIR, "configs", "config.json")
 SOCKET_PATH = "/tmp/mpv-socket"
@@ -15,20 +13,26 @@ def get_sys_lang():
     try:
         lang = locale.getlocale()[0][:2]
         return lang if lang in ["ru", "en"] else "en"
-    except:
-        return "en"
+    except: return "en"
 
 LANG = get_sys_lang()
 MSG = {
-    "ru": {"err_url": "[Ошибка] URL плейлиста не настроен.", "playing": "Сейчас играет"},
-    "en": {"err_url": "[Error] Playlist URL is not configured.", "playing": "Now Playing"}
+    "ru": {
+        "err_url": "[Ошибка] Ссылка не найдена. Запустите playlistconfig.",
+        "playing": "Играет",
+        "start": "[Система] Запуск аудио-сессии..."
+    },
+    "en": {
+        "err_url": "[Error] URL not found. Run playlistconfig.",
+        "playing": "Playing",
+        "start": "[System] Starting audio session..."
+    }
 }
 
 def load_config():
     if not os.path.isfile(CONFIG_PATH):
         return {"volume": 70, "shuffle": True, "loop": True, "playlist_url": ""}
-    with open(CONFIG_PATH, 'r') as f:
-        return json.load(f)
+    with open(CONFIG_PATH, 'r') as f: return json.load(f)
 
 def send_notification():
     time.sleep(5)
@@ -52,30 +56,46 @@ def run_stuff():
         print(MSG[LANG]["err_url"])
         return
 
-    mpv_cmd = [
-        "mpv", "--no-video", f"--input-ipc-server={SOCKET_PATH}",
+    print(MSG[LANG]["start"])
+
+    # Базовые аргументы MPV
+    mpv_args = [
+        "mpv",
+        "--no-video",
+        f"--input-ipc-server={SOCKET_PATH}",
         f"--volume={conf.get('volume', 70)}",
         f"--ytdl-format={conf.get('ytdl_format', 'bestaudio')}",
-        "--ytdl-raw-options=yes-playlist=", "--term-osd-bar=yes"
+        "--term-osd-bar=yes",
+        "--force-window=no"
     ]
-    
-    for key, opt in [('shuffle', '--shuffle'), ('loop', '--loop-playlist=inf'), 
-                     ('prefetch', '--prefetch-playlist=yes'), ('gapless', '--gapless-audio=yes')]:
-        if conf.get(key): mpv_cmd.append(opt)
-    
-    if conf.get('loudnorm'): mpv_cmd.append("--af=loudnorm")
-    mpv_cmd.append(conf.get('playlist_url'))
 
+    if conf.get('shuffle'): mpv_args.append("--shuffle")
+    if conf.get('loop'): mpv_args.append("--loop-playlist=inf")
+    if conf.get('prefetch'): mpv_args.append("--prefetch-playlist=yes")
+    if conf.get('gapless'): mpv_args.append("--gapless-audio=yes")
+    if conf.get('loudnorm'): mpv_args.append("--af=loudnorm")
+    
+    mpv_args.append(f"\"{conf.get('playlist_url')}\"")
+    mpv_cmd_str = " ".join(mpv_args)
+
+    # Запускаем уведомления в фоне
     threading.Thread(target=send_notification, daemon=True).start()
-    mpv_str = " ".join(f"'{c}'" if " " in c or "http" in c else c for c in mpv_cmd)
-    
-    # Использование rf"" устраняет SyntaxWarning для \;
-    tmux_cmd = rf"tmux new-session -d -s playlist_session 'cava' \; split-window -v -p 20 \"{mpv_str}\" \; select-pane -t 1 \; attach-session -t playlist_session"
-    
+
+    # Сборка команды TMUX: 
+    # 1. Создаем сессию с CAVA
+    # 2. Сплитим окно и запускаем MPV
+    # 3. Устанавливаем фокус на CAVA (верхняя панель)
+    tmux_cmd = [
+        "tmux", "new-session", "-d", "-s", "playlist_session", "cava", ";",
+        "split-window", "-v", "-p", "30", mpv_cmd_str, ";",
+        "select-pane", "-t", "0", ";",
+        "attach-session", "-t", "playlist_session"
+    ]
+
     try:
-        subprocess.run(tmux_cmd, shell=True)
+        subprocess.run(tmux_cmd)
     except Exception as e:
-        print(f"[Fatal] Tmux error: {e}")
+        print(f"[Критическая ошибка]: {e}")
 
 if __name__ == "__main__":
     run_stuff()
