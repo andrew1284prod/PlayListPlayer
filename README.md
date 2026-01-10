@@ -14,5 +14,5 @@
 
 ## 🚀 Установка
 ```bash
-git clone [https://github.com/andrew1284prod/playlistplayer.git](https://github.com/andrew1284prod/playlistplayer.git) && cd playlistplayer && python setup.py
+git clone https://github.com/andrew1284prod/playlistplayer.git && cd playlistplayer && python setup.py
 ```
