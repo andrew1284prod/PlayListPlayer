@@ -3,10 +3,7 @@ import sys
 import json
 import locale
 import subprocess
-import urllib.request
-
-GITHUB_RAW = "https://raw.githubusercontent.com/andrew1284prod/playlistplayer/main/"
-VERSION_FILE = "version.json"
+import shutil
 
 def get_sys_lang():
     try:
@@ -17,52 +14,101 @@ def get_sys_lang():
 LANG = get_sys_lang()
 MSG = {
     "ru": {
-        "start": "[Установка] Запуск процесса развертывания системы...",
-        "fetch_ver": "[Связь] Получение данных о версии...",
-        "download": "[Процесс] Загрузка компонентов {v} ({p}, тип {t})...",
-        "deps": "[Система] Установка необходимых зависимостей...",
-        "done": "[Успех] Playlist Player v{v} успешно установлен в систему."
+        "start": "[Установка] Инициализация Playlist Player...",
+        "check_pkg": "[Система] Проверка необходимых пакетов...",
+        "pkg_missing": "[Внимание] Отсутствуют пакеты: {}. Установить? (y/n): ",
+        "dir_select": "[Интерфейс] Выберите директорию для установки в открывшемся окне...",
+        "installing": "[Процесс] Копирование файлов и настройка окружения...",
+        "alias": "[Конфиг] Настройка алиасов в {}...",
+        "done": "[Успех] Установка завершена! Перезапустите терминал.",
+        "error": "[Ошибка] Произошел сбой: {}"
     },
     "en": {
-        "start": "[Setup] Starting system deployment process...",
-        "fetch_ver": "[Network] Fetching version data...",
-        "download": "[Process] Downloading components {v} ({p}, type {t})...",
-        "deps": "[System] Installing required dependencies...",
-        "done": "[Success] Playlist Player v{v} installed successfully."
+        "start": "[Setup] Initializing Playlist Player...",
+        "check_pkg": "[System] Checking dependencies...",
+        "pkg_missing": "[Warning] Missing packages: {}. Install? (y/n): ",
+        "dir_select": "[UI] Select installation directory in the dialog window...",
+        "installing": "[Process] Copying files and configuring environment...",
+        "alias": "[Config] Setting up aliases in {}...",
+        "done": "[Success] Setup complete! Please restart your terminal.",
+        "error": "[Error] Something went wrong: {}"
     }
 }
 
-def run_setup():
-    m = MSG.get(LANG, MSG["en"])
-    print(m["start"])
+REQUIRED_PACKAGES = ["mpv", "yt-dlp", "tmux", "cava", "socat", "python-pyqt6", "zenity", "tk"]
+
+def check_and_install_deps():
+    m = MSG[LANG]
+    missing = []
+    for pkg in REQUIRED_PACKAGES:
+        # Проверка через pacman (Arch Linux)
+        check = subprocess.run(["pacman", "-Qq", pkg], capture_output=True, text=True)
+        if check.returncode != 0:
+            missing.append(pkg)
     
-    # 1. Получаем инфу о версии перед загрузкой
-    print(m["fetch_ver"])
-    try:
-        with urllib.request.urlopen(GITHUB_RAW + VERSION_FILE) as res:
-            v_data = json.loads(res.read().decode())
-            ver = v_data.get("version")
-            prev = v_data.get("versionpreview")
-            v_type = v_data.get("versiontype")
-    except:
-        ver, prev, v_type = "Unknown", "Unknown", "Unknown"
+    if missing:
+        ans = input(m["pkg_missing"].format(", ".join(missing))).lower()
+        if ans in ['y', 'yes', 'д', 'да']:
+            subprocess.run(["sudo", "pacman", "-S", "--needed", "--noconfirm"] + missing)
+        else:
+            print("[!] Установка прервана: отсутствуют зависимости.")
+            sys.exit(1)
 
-    print(m["download"].format(v=ver, p=prev, t=v_type))
-
-    # 2. Логика скачивания файлов (пример)
-    files = ["gui_config.py", "run_mpv.py", "playlistupd.py", "version.json"]
-    for f in files:
+def select_directory_native():
+    if shutil.which("zenity"):
         try:
-            urllib.request.urlretrieve(GITHUB_RAW + f, f)
-        except:
-            print(f"[!] Ошибка загрузки {f}")
+            return subprocess.check_output(["zenity", "--file-selection", "--directory", "--title=Путь установки"], text=True).strip()
+        except: return None
+    return input("Введите путь вручную: ").strip()
 
-    # 3. Установка зависимостей (строгий вывод)
-    print(m["deps"])
-    # Пример вызова пакетного менеджера (Arch Linux)
-    # subprocess.run(["sudo", "pacman", "-S", "--noconfirm", "mpv", "yt-dlp", "tmux", "cava", "socat", "python-pyqt6"])
+def run_setup():
+    m = MSG[LANG]
+    print(m["start"])
 
-    print(m["done"].format(v=ver))
+    # 1. Проверка пакетов
+    print(m["check_pkg"])
+    check_and_install_deps()
+
+    # 2. Выбор папки
+    print(m["dir_select"])
+    target_path = select_directory_native()
+    if not target_path: return
+
+    # 3. Установка (копирование из текущей папки git)
+    try:
+        print(m["installing"])
+        if not os.path.exists(target_path):
+            os.makedirs(target_path)
+        
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        files = ["gui_config.py", "run_mpv.py", "playlistupd.py", "version.json"]
+        
+        for f in files:
+            shutil.copy2(os.path.join(current_dir, f), os.path.join(target_path, f))
+
+        # 4. Алиасы
+        shell_path = os.environ.get("SHELL", "")
+        rc_file = os.path.expanduser("~/.zshrc" if "zsh" in shell_path else "~/.bashrc")
+        
+        if os.path.exists(rc_file):
+            print(m["alias"].format(rc_file))
+            alias_data = (
+                f'\n# PlaylistPlayer\n'
+                f'alias playlist="python3 {os.path.join(target_path, "run_mpv.py")}"\n'
+                f'alias playlistconfig="python3 {os.path.join(target_path, "gui_config.py")}"\n'
+                f'alias playlistupd="python3 {os.path.join(target_path, "playlistupd.py")}"\n'
+            )
+            with open(rc_file, "r") as f:
+                if 'alias playlist="' not in f.read():
+                    with open(rc_file, "a") as fa:
+                        fa.write(alias_data)
+
+        print("-" * 40)
+        print(m["done"])
+        print(f"[!] Теперь команды 'playlist', 'playlistconfig' и 'playlistupd' доступны в терминале.")
+
+    except Exception as e:
+        print(m["error"].format(e))
 
 if __name__ == "__main__":
     run_setup()
