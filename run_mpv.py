@@ -20,12 +20,12 @@ MSG = {
     "ru": {
         "err_url": "[Ошибка] Ссылка не найдена. Запустите playlistconfig.",
         "playing": "Играет",
-        "start": "[Система] Запуск аудио-сессии..."
+        "start": "[Система] Запуск сессии (Управление: Клавиатура -> MPV)..."
     },
     "en": {
         "err_url": "[Error] URL not found. Run playlistconfig.",
         "playing": "Playing",
-        "start": "[System] Starting audio session..."
+        "start": "[System] Starting session (Focus: MPV Controls)..."
     }
 }
 
@@ -58,15 +58,14 @@ def run_stuff():
 
     print(MSG[LANG]["start"])
 
-    # Базовые аргументы MPV
+    # Аргументы MPV
     mpv_args = [
         "mpv",
         "--no-video",
         f"--input-ipc-server={SOCKET_PATH}",
         f"--volume={conf.get('volume', 70)}",
         f"--ytdl-format={conf.get('ytdl_format', 'bestaudio')}",
-        "--term-osd-bar=yes",
-        "--force-window=no"
+        "--term-osd-bar=yes"
     ]
 
     if conf.get('shuffle'): mpv_args.append("--shuffle")
@@ -78,21 +77,22 @@ def run_stuff():
     mpv_args.append(f"\"{conf.get('playlist_url')}\"")
     mpv_cmd_str = " ".join(mpv_args)
 
-    # Запускаем уведомления в фоне
     threading.Thread(target=send_notification, daemon=True).start()
 
-    # Сборка команды TMUX: 
-    # 1. Создаем сессию с CAVA
-    # 2. Сплитим окно и запускаем MPV
-    # 3. Устанавливаем фокус на CAVA (верхняя панель)
+    # Сборка команды TMUX:
+    # 1. Создаем сессию с CAVA (панель 0)
+    # 2. Сплитим окно для MPV (панель 1)
+    # 3. ВАЖНО: Выбираем панель 1 (select-pane -t 1), чтобы хоткеи летели в MPV
     tmux_cmd = [
         "tmux", "new-session", "-d", "-s", "playlist_session", "cava", ";",
-        "split-window", "-v", "-p", "30", mpv_cmd_str, ";",
-        "select-pane", "-t", "0", ";",
+        "split-window", "-v", "-p", "35", mpv_cmd_str, ";",
+        "select-pane", "-t", "1", ";", 
         "attach-session", "-t", "playlist_session"
     ]
 
     try:
+        # Убиваем старую сессию, если она зависла
+        subprocess.run(["tmux", "kill-session", "-t", "playlist_session"], capture_output=True)
         subprocess.run(tmux_cmd)
     except Exception as e:
         print(f"[Критическая ошибка]: {e}")
