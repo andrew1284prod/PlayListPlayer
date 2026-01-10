@@ -9,7 +9,7 @@ import json
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 TMP_DIR = "/tmp/playlist_update_check"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/andrew1284prod/playlistplayer/main/"
-VERSION_FILE = "version.json" # Файл с версией на GitHub (например, {"version": "1.2"})
+VERSION_FILE = "version.json"
 
 # Список файлов для глубокой проверки
 FILES_TO_CHECK = ["gui_config.py", "run_mpv.py", "playlistupd.py"]
@@ -23,28 +23,26 @@ def get_sys_lang():
 LANG = get_sys_lang()
 MSG = {
     "ru": {
-        "ver_check": "[Информация] Проверка версии...",
-        "ver_match": "[Информация] У вас установлена актуальная версия. Провести глубокую проверку файлов? (y/n): ",
-        "new_ver": "[Обновление] Доступна новая версия! Установить? (y/n): ",
-        "start": "[Информация] Начало проверки целостности компонентов...",
-        "updating": "[Обновление] Файл {} изменен. Переустановка...",
-        "no_change": "[Информация] Файл {} в порядке.",
-        "cleanup": "[Система] Очистка временных файлов...",
-        "done": "[Успех] Все компоненты проверены и актуализированы.",
-        "error": "[Ошибка] Не удалось получить данные: {}",
-        "cancel": "[Отмена] Операция отменена пользователем."
+        "ver_check": "[Информация] Сверка версий с репозиторием...",
+        "ver_match": "[Информация] Версии совпадают. Запустить глубокую проверку файлов? (y/n): ",
+        "new_ver": "[Обновление] Найдена новая версия. Начать установку? (y/n): ",
+        "start": "[Информация] Запуск процесса верификации хеш-сумм...",
+        "updating": "[Обновление] Обнаружено различие в {}. Перезапись...",
+        "no_change": "[Информация] Компонент {} идентичен оригиналу.",
+        "cleanup": "[Система] Удаление временных данных из RAM...",
+        "done": "[Успех] Проверка завершена успешно.",
+        "error": "[Ошибка] Сбой сетевого соединения или доступа к файлам: {}"
     },
     "en": {
-        "ver_check": "[Info] Checking version...",
-        "ver_match": "[Info] Your version is up to date. Perform deep integrity check? (y/n): ",
-        "new_ver": "[Update] New version available! Install? (y/n): ",
-        "start": "[Info] Starting component integrity check...",
-        "updating": "[Update] File {} changed. Reinstalling...",
-        "no_change": "[Info] File {} is up to date.",
-        "cleanup": "[System] Cleaning up temporary files...",
-        "done": "[Success] All components checked and updated.",
-        "error": "[Error] Failed to fetch data: {}",
-        "cancel": "[Cancel] Operation cancelled by user."
+        "ver_check": "[Info] Checking version compatibility...",
+        "ver_match": "[Info] Versions match. Run deep file integrity check? (y/n): ",
+        "new_ver": "[Update] New version detected. Proceed with installation? (y/n): ",
+        "start": "[Info] Starting hash verification process...",
+        "updating": "[Update] Difference found in {}. Overwriting...",
+        "no_change": "[Info] Component {} is valid.",
+        "cleanup": "[System] Clearing temporary data from RAM...",
+        "done": "[Success] Verification complete.",
+        "error": "[Error] Connection or file access failure: {}"
     }
 }
 
@@ -63,26 +61,29 @@ def run_update():
     m = MSG.get(LANG, MSG["en"])
     print(m["ver_check"])
     
-    # 1. Сначала проверяем версию
+    # Пытаемся получить версию с GitHub
     try:
-        with urllib.request.urlopen(GITHUB_RAW_URL + VERSION_FILE) as response:
+        with urllib.request.urlopen(GITHUB_RAW_URL + VERSION_FILE, timeout=5) as response:
             remote_version_data = json.loads(response.read().decode())
-            remote_version = remote_version_data.get("version", "1.0")
-            
-        # Локальная версия (можно хранить в файле или в коде)
-        local_version = "1.0" # Пример
-
-        if remote_version == local_version:
-            if not ask_user(m["ver_match"]):
-                return
-        else:
-            if not ask_user(m["new_ver"]):
-                return
+            remote_version = str(remote_version_data.get("version", "1.0"))
     except Exception as e:
         print(m["error"].format(e))
+        # Если не смогли проверить версию, предлагаем сразу глубокую проверку
         if not ask_user(m["ver_match"]): return
+        remote_version = "unknown"
 
-    # 2. Глубокая проверка файлов
+    # Локальная версия (можно хранить в коде или в configs/config.json)
+    # Для простоты считаем текущую 1.0. Если хочешь автоматику — нужно создать local_version.json
+    local_version = "1.0" 
+
+    if remote_version == local_version:
+        if not ask_user(m["ver_match"]):
+            return
+    else:
+        if not ask_user(m["new_ver"]):
+            return
+
+    # Глубокая проверка
     print(m["start"])
     if os.path.exists(TMP_DIR): shutil.rmtree(TMP_DIR)
     os.makedirs(TMP_DIR)
@@ -94,15 +95,19 @@ def run_update():
             
             try:
                 urllib.request.urlretrieve(GITHUB_RAW_URL + filename, tmp_path)
-            except: continue
+            except: 
+                print(f"[!] Не удалось проверить {filename}")
+                continue
 
             if os.path.exists(local_path):
+                # Сверяем по байтам (SHA256)
                 if get_file_hash(local_path) != get_file_hash(tmp_path):
                     print(m["updating"].format(filename))
                     shutil.copy2(tmp_path, local_path)
                 else:
                     print(m["no_change"].format(filename))
             else:
+                # Если файла вообще нет — качаем
                 shutil.copy2(tmp_path, local_path)
     finally:
         print(m["cleanup"])
