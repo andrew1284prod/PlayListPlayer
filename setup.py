@@ -16,7 +16,7 @@ FILES_TO_DOWNLOAD = ["run_mpv.py", "gui_config.py", "version.json", "playlistupd
 # Словарик с переводами для инсталлера
 LANGS = {
     "ru": {
-        "title": "УСТАНОВКА MPV PLAYER Z",
+        "title": "УСТАНОВКА PLAYLIST PLAYER",
         "path": "Путь:",
         "btn_folder": "ВЫБРАТЬ ПАПКУ 📁",
         "btn_install": "УСТАНОВИТЬ С ГИТХАБА 🚀",
@@ -26,7 +26,7 @@ LANGS = {
         "installing": "Ставим зависимости... 🛠️"
     },
     "uk": {
-        "title": "ВСТАНОВЛЕННЯ MPV PLAYER Z",
+        "title": "ВСТАНОВЛЕННЯ PLAYLIST PLAYER",
         "path": "Шлях:",
         "btn_folder": "ОБРАТИ ПАПКУ 📁",
         "btn_install": "ВСТАНОВИТИ З ГІТХАБА 🚀",
@@ -36,7 +36,7 @@ LANGS = {
         "installing": "Встановлюємо залежності... 🛠️"
     },
     "en": {
-        "title": "MPV PLAYER Z INSTALLER",
+        "title": "PLAYLIST PLAYER INSTALLER",
         "path": "Path:",
         "btn_folder": "SELECT FOLDER 📁",
         "btn_install": "INSTALL FROM GITHUB 🚀",
@@ -64,7 +64,7 @@ def install_packages():
 class InstallerApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("MPV Playlist Installer")
+        self.setWindowTitle("PLAYLIST PLAYER Installer")
         self.setFixedSize(500, 350)
         self.install_path = os.path.expanduser("~/mpvplaylist")
         self.init_ui()
