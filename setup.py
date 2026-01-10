@@ -10,7 +10,7 @@ from PyQt6.QtGui import QLinearGradient, QColor, QPalette, QBrush
 from PyQt6.QtCore import Qt
 
 # ССЫЛКИ НА ТВОЙ ГИТ
-GITHUB_RAW = "https://raw.githubusercontent.com/USER/REPO/main"
+GITHUB_RAW = "https://raw.githubusercontent.com/andrew1284prod/playlistplayer/main"
 FILES_TO_DOWNLOAD = ["run_mpv.py", "gui_config.py", "version.json", "playlistupd.py"]
 
 # Словарик с переводами для инсталлера
