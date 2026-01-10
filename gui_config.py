@@ -3,13 +3,14 @@ import sys
 import json
 import re
 import math
+import locale
 from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel, 
                              QLineEdit, QSlider, QCheckBox, QPushButton, 
                              QComboBox, QGridLayout, QHBoxLayout, QColorDialog, QDialog)
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QLinearGradient, QColor, QPalette, QBrush
 
-# Относительные пути
+# Определение путей
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.path.join(ROOT_DIR, "configs")
 CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
@@ -19,18 +20,18 @@ os.makedirs(CONFIG_DIR, exist_ok=True)
 
 STRINGS = {
     "ru": {
-        "title": "Playlist Player Settings",
+        "title": "Настройки Playlist Player",
         "url_label": "Ссылка на плейлист YouTube",
         "quality_label": "Качество аудио",
         "vol_label": "Громкость",
         "shuffle": "Перемешать",
-        "loop": " Повтор",
+        "loop": "Повтор",
         "prefetch": "Предзагрузка",
         "gapless": "Без пауз",
         "loudnorm": "Нормализация",
-        "save": "СОХРАНИТЬ КОНФИГ ✨",
-        "saved_msg": "УСПЕШНО СОХРАНЕНО! ✅",
-        "custom_btn": "ДИЗАЙН 🎨"
+        "save": "СОХРАНИТЬ КОНФИГУРАЦИЮ",
+        "saved_msg": "КОНФИГУРАЦИЯ СОХРАНЕНА",
+        "custom_btn": "ДИЗАЙН"
     },
     "en": {
         "title": "Playlist Player Settings",
@@ -38,27 +39,33 @@ STRINGS = {
         "quality_label": "Audio Quality",
         "vol_label": "Volume",
         "shuffle": "Shuffle",
-        "loop": "Loop Playlist",
+        "loop": "Loop",
         "prefetch": "Prefetch",
         "gapless": "Gapless Audio",
         "loudnorm": "Loudnorm",
-        "save": "SAVE CONFIG ✨",
-        "saved_msg": "CONFIG SAVED! ✅",
-        "custom_btn": "DESIGN 🎨"
+        "save": "SAVE CONFIGURATION",
+        "saved_msg": "CONFIGURATION SAVED",
+        "custom_btn": "DESIGN"
     }
 }
 
 class ModernConfigApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.lang = "ru"
+        # Исправленное определение системного языка
+        try:
+            sys_lang = locale.getlocale()[0][:2]
+        except:
+            sys_lang = "en"
+        self.lang = sys_lang if sys_lang in STRINGS else "en"
+
         self.color1 = QColor("#1e1e2e")
         self.color2 = QColor("#5865f2")
         self.anim_speed = 0
         self.anim_step = 0.0
         
         self.setWindowTitle("Playlist Player Config")
-        self.setFixedSize(500, 660)
+        self.setFixedSize(500, 680)
         
         self.load_custom_config()
         self.init_ui()
@@ -100,56 +107,44 @@ class ModernConfigApp(QWidget):
     def init_ui(self):
         self.setAutoFillBackground(True)
         self.main_layout = QVBoxLayout()
-        # Отступы: слева, сверху, справа, снизу (снизу чуть меньше для подписи)
         self.main_layout.setContentsMargins(35, 20, 35, 10)
         self.main_layout.setSpacing(10)
 
-        # Верхняя панель: Выбор языка и кнопка Дизайна
         top_bar = QHBoxLayout()
         self.lang_combo = QComboBox()
         self.lang_combo.addItems(["Русский", "English"])
         self.lang_combo.currentIndexChanged.connect(self.change_lang)
-        self.lang_combo.setStyleSheet("background: rgba(255,255,255,0.1); color: white; border-radius: 5px; padding: 5px;")
+        self.lang_combo.setStyleSheet("background: rgba(255,255,255,0.1); color: white; border-radius: 5px;")
         
         self.custom_btn = QPushButton()
         self.custom_btn.clicked.connect(self.show_design_dialog)
-        self.custom_btn.setStyleSheet("background: rgba(255,255,255,0.2); color: white; border-radius: 5px; padding: 5px 15px; font-weight: bold;")
+        self.custom_btn.setStyleSheet("background: rgba(255,255,255,0.2); color: white; border-radius: 5px; padding: 5px 15px;")
         
-        top_bar.addWidget(self.lang_combo)
-        top_bar.addStretch()
-        top_bar.addWidget(self.custom_btn)
+        top_bar.addWidget(self.lang_combo); top_bar.addStretch(); top_bar.addWidget(self.custom_btn)
         self.main_layout.addLayout(top_bar)
 
-        # Заголовок проги
         self.title_label = QLabel("Playlist Player")
         self.title_label.setStyleSheet("font-size: 26px; font-weight: bold; color: white; margin: 15px 0;")
         self.main_layout.addWidget(self.title_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        # Поле ввода URL
-        self.l_url = QLabel()
-        self.main_layout.addWidget(self.l_url)
+        self.l_url = QLabel(); self.main_layout.addWidget(self.l_url)
         self.url_input = QLineEdit()
         self.url_input.setStyleSheet("background: rgba(0,0,0,0.4); border-radius: 8px; padding: 12px; color: white; border: 1px solid #5865f2;")
         self.main_layout.addWidget(self.url_input)
 
-        # Выбор качества
-        self.l_qual = QLabel()
-        self.main_layout.addWidget(self.l_qual)
+        self.l_qual = QLabel(); self.main_layout.addWidget(self.l_qual)
         self.quality_combo = QComboBox()
         self.quality_map = {"Best": "bestaudio", "Balanced": "bestaudio[abr<=192]", "Potato": "worstaudio"}
         self.quality_combo.addItems(self.quality_map.keys())
         self.quality_combo.setStyleSheet("background: rgba(0,0,0,0.3); color: white; padding: 8px; border-radius: 5px;")
         self.main_layout.addWidget(self.quality_combo)
 
-        # Ползунок громкости
-        self.vol_text = QLabel()
-        self.main_layout.addWidget(self.vol_text)
+        self.vol_text = QLabel(); self.main_layout.addWidget(self.vol_text)
         self.vol_slider = QSlider(Qt.Orientation.Horizontal)
         self.vol_slider.setRange(0, 100)
         self.vol_slider.valueChanged.connect(self.update_vol_label)
         self.main_layout.addWidget(self.vol_slider)
 
-        # Сетка чекбоксов (Перемешать, Повтор и т.д.)
         grid = QGridLayout()
         self.shuffle_cb = QCheckBox(); self.loop_cb = QCheckBox()
         self.prefetch_cb = QCheckBox(); self.gapless_cb = QCheckBox(); self.norm_cb = QCheckBox()
@@ -159,35 +154,31 @@ class ModernConfigApp(QWidget):
             grid.addWidget(cb, i // 2, i % 2)
         self.main_layout.addLayout(grid)
 
-        # Кнопка сохранения
         self.save_btn = QPushButton()
         self.save_btn.clicked.connect(self.save_settings)
         self.save_btn.setStyleSheet("background: #2ecc71; color: white; font-weight: bold; padding: 18px; border-radius: 12px; margin-top: 20px;")
         self.main_layout.addWidget(self.save_btn)
 
-        # Пружина, чтобы прижать футер к самому низу окна
         self.main_layout.addStretch()
-
-        # Футер с твоей ссылкой
         self.footer = QLabel('<a href="https://github.com/andrew1284prod/playlistplayer" style="color: rgba(255, 255, 255, 0.4); text-decoration: none;">By andrew1284prod</a>')
-        self.footer.setOpenExternalLinks(True) # Открывает браузер по клику
-        self.footer.setStyleSheet("font-size: 20px; font-style: italic; margin-top: 10px;")
+        self.footer.setOpenExternalLinks(True)
+        self.footer.setStyleSheet("font-size: 11px; font-style: italic; margin-top: 10px;")
         self.main_layout.addWidget(self.footer, alignment=Qt.AlignmentFlag.AlignLeft)
 
         self.setLayout(self.main_layout)
 
     def show_design_dialog(self):
         d = QDialog(self)
-        d.setWindowTitle("Design")
+        d.setWindowTitle("Design Settings")
         d.setFixedSize(300, 250)
         d.setStyleSheet("background: #232323; color: white;")
         layout = QVBoxLayout()
-        btn_c1 = QPushButton(f"Цвет 1: {self.color1.name()}"); btn_c1.clicked.connect(lambda: self.pick_color(1, btn_c1))
-        btn_c2 = QPushButton(f"Цвет 2: {self.color2.name()}"); btn_c2.clicked.connect(lambda: self.pick_color(2, btn_c2))
-        lbl_speed = QLabel(f"Скорость: {self.anim_speed}")
+        btn_c1 = QPushButton(f"Color 1: {self.color1.name()}"); btn_c1.clicked.connect(lambda: self.pick_color(1, btn_c1))
+        btn_c2 = QPushButton(f"Color 2: {self.color2.name()}"); btn_c2.clicked.connect(lambda: self.pick_color(2, btn_c2))
+        lbl_speed = QLabel(f"Speed: {self.anim_speed}")
         sl_speed = QSlider(Qt.Orientation.Horizontal); sl_speed.setRange(0, 50); sl_speed.setValue(self.anim_speed)
         sl_speed.valueChanged.connect(lambda v: self.set_anim_speed(v, lbl_speed))
-        btn_ok = QPushButton("ОК"); btn_ok.clicked.connect(d.accept)
+        btn_ok = QPushButton("OK"); btn_ok.clicked.connect(d.accept)
         for w in [btn_c1, btn_c2, lbl_speed, sl_speed, btn_ok]: layout.addWidget(w)
         d.setLayout(layout); d.exec()
 
@@ -196,10 +187,10 @@ class ModernConfigApp(QWidget):
         if color.isValid():
             if n == 1: self.color1 = color
             else: self.color2 = color
-            btn.setText(f"Цвет {n}: {color.name()}"); self.save_custom_config()
+            btn.setText(f"Color {n}: {color.name()}"); self.save_custom_config()
 
     def set_anim_speed(self, v, label):
-        self.anim_speed = v; label.setText(f"Скорость: {v}")
+        self.anim_speed = v; label.setText(f"Speed: {v}")
         if v > 0: self.timer.start(16) if not self.timer.isActive() else None
         else: self.timer.stop()
         self.save_custom_config()
@@ -214,13 +205,15 @@ class ModernConfigApp(QWidget):
         self.prefetch_cb.setText(s["prefetch"]); self.gapless_cb.setText(s["gapless"])
         self.norm_cb.setText(s["loudnorm"]); self.save_btn.setText(s["save"]); self.custom_btn.setText(s["custom_btn"])
 
-    def change_lang(self, index): self.lang = "ru" if index == 0 else "en"; self.update_ui_text()
+    def change_lang(self, index): 
+        self.lang = "ru" if index == 0 else "en"
+        self.update_ui_text()
 
     def load_settings(self):
         if os.path.exists(CONFIG_PATH):
             try:
                 with open(CONFIG_PATH, 'r') as f:
-                    d = json.load(f); self.lang = d.get("lang", "ru")
+                    d = json.load(f); self.lang = d.get("lang", self.lang)
                     self.lang_combo.setCurrentIndex(0 if self.lang == "ru" else 1)
                     self.url_input.setText(d.get("playlist_url", ""))
                     self.vol_slider.setValue(d.get("volume", 70))
