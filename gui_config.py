@@ -31,6 +31,9 @@ STRINGS = {
         "prefetch": "Предзагрузка",
         "gapless": "Воспроизведение без пауз",
         "loudnorm": "Нормализация звука",
+        "notifications": "Уведомления",
+        "alias_btn": "ДОБАВИТЬ АЛИАСЫ ⌨️",
+        "alias_done": "Алиасы добавлены!",
         "save": "СОХРАНИТЬ ПАРАМЕТРЫ",
         "saved_msg": "КОНФИГУРАЦИЯ ОБНОВЛЕНА ✅",
         "custom_btn": "ДИЗАЙН 🎨"
@@ -43,6 +46,9 @@ STRINGS = {
         "shuffle": "Shuffle Mode",
         "loop": "Loop Playlist",
         "prefetch": "Prefetching",
+        "notifications": "Notifications",
+        "alias_btn": "ADD ALIASES ⌨",
+        "alias_done": "Aliases added!",
         "gapless": "Gapless Playback",
         "loudnorm": "Loudness Normalization",
         "save": "SAVE CONFIGURATION",
@@ -106,7 +112,35 @@ class ModernConfigApp(QWidget):
         conf = {"color1": self.color1.name(), "color2": self.color2.name(), "speed": self.anim_speed}
         with open(CUSTOM_PATH, 'w') as f:
             json.dump(conf, f, indent=4)
-
+    def add_aliases(self):
+        shell_rc = os.path.expanduser("~/.zshrc") if "zsh" in os.environ.get("SHELL", "") else os.path.expanduser("~/.bashrc")
+        aliases = {
+            "plpcfg": f"python3 {os.path.join(ROOT_DIR, 'gui_config.py')}",
+            "plp": f"python3 {os.path.join(ROOT_DIR, 'run_mpv.py')}",
+            "plpupd": f"python3 {os.path.join(ROOT_DIR, 'playlistupd.py')}"
+        }
+        
+        try:
+            content = ""
+            if os.path.exists(shell_rc):
+                with open(shell_rc, "r") as f:
+                    content = f.read()
+            
+            to_add = []
+            for cmd, path in aliases.items():
+                line = f"alias {cmd}='{path}'"
+                if line not in content:
+                    to_add.append(line)
+            
+            if to_add:
+                with open(shell_rc, "a") as f:
+                    f.write("\n# PlaylistPlayer Aliases\n" + "\n".join(to_add) + "\n")
+                self.alias_btn.setText(STRINGS[self.lang]["alias_done"])
+            else:
+                self.alias_btn.setText("ALREADY EXISTS")
+        except Exception as e:
+            print(f"Error adding aliases: {e}")
+     
     def animate_bg(self):
         self.anim_step += self.anim_speed / 500
         if self.anim_step > 1.0: self.anim_step = 0
@@ -124,7 +158,6 @@ class ModernConfigApp(QWidget):
         self.main_layout = QVBoxLayout()
         self.main_layout.setContentsMargins(35, 25, 35, 15)
         self.main_layout.setSpacing(12)
-
         # Верхняя панель управления
         top_bar = QHBoxLayout()
         self.lang_combo = QComboBox()
@@ -167,7 +200,8 @@ class ModernConfigApp(QWidget):
         grid = QGridLayout()
         self.shuffle_cb = QCheckBox(); self.loop_cb = QCheckBox()
         self.prefetch_cb = QCheckBox(); self.gapless_cb = QCheckBox(); self.norm_cb = QCheckBox()
-        self.cbs = [self.shuffle_cb, self.loop_cb, self.prefetch_cb, self.gapless_cb, self.norm_cb]
+        self.notify_cb = QCheckBox()
+        self.cbs = [self.shuffle_cb, self.loop_cb, self.prefetch_cb, self.gapless_cb, self.norm_cb, self.notify_cb]
         for i, cb in enumerate(self.cbs):
             cb.setStyleSheet("color: white; font-size: 13px;")
             grid.addWidget(cb, i // 2, i % 2)
@@ -180,6 +214,15 @@ class ModernConfigApp(QWidget):
         self.main_layout.addWidget(self.save_btn)
 
         self.main_layout.addStretch()
+
+        #Говно под названием алиас сука
+        self.alias_btn = QPushButton()
+        self.alias_btn.clicked.connect(self.add_aliases)
+        self.main_layout.addWidget(self.alias_btn)
+
+        self.alias_hint = QLabel("plpcfg, plp, plpupd")
+        self.alias_hint.setStyleSheet("color: rgba(255,255,255,0.3); font-size: 9px;")
+        self.main_layout.addWidget(self.alias_hint, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # Футер (Автор слева, Версия справа)
         footer_layout = QHBoxLayout()
@@ -230,11 +273,18 @@ class ModernConfigApp(QWidget):
 
     def update_ui_text(self):
         s = STRINGS[self.lang]
-        self.l_url.setText(s["url_label"]); self.l_qual.setText(s["quality_label"])
+        self.l_url.setText(s["url_label"])
+        self.l_qual.setText(s["quality_label"])
         self.update_vol_label(self.vol_slider.value())
-        self.shuffle_cb.setText(s["shuffle"]); self.loop_cb.setText(s["loop"])
-        self.prefetch_cb.setText(s["prefetch"]); self.gapless_cb.setText(s["gapless"])
-        self.norm_cb.setText(s["loudnorm"]); self.save_btn.setText(s["save"]); self.custom_btn.setText(s["custom_btn"])
+        self.shuffle_cb.setText(s["shuffle"])
+        self.loop_cb.setText(s["loop"])
+        self.prefetch_cb.setText(s["prefetch"])
+        self.gapless_cb.setText(s["gapless"])
+        self.norm_cb.setText(s["loudnorm"])
+        self.notify_cb.setText(s["notifications"]) # Добавь это!
+        self.save_btn.setText(s["save"])
+        self.custom_btn.setText(s["custom_btn"])
+        self.alias_btn.setText(s["alias_btn"]) # И это!
 
     def change_lang(self, index): 
         self.lang = "ru" if index == 0 else "en"
@@ -249,7 +299,7 @@ class ModernConfigApp(QWidget):
                     self.lang_combo.setCurrentIndex(0 if self.lang == "ru" else 1)
                     self.url_input.setText(d.get("playlist_url", ""))
                     self.vol_slider.setValue(d.get("volume", 70))
-                    for cb, key in zip(self.cbs, ["shuffle", "loop", "prefetch", "gapless", "loudnorm"]):
+                    for cb, key in zip(self.cbs, ["shuffle", "loop", "prefetch", "gapless", "loudnorm", "allow_notifications"]):
                         cb.setChecked(d.get(key, True))
             except: pass
 
@@ -259,6 +309,7 @@ class ModernConfigApp(QWidget):
         conf = {
             "lang": self.lang, "playlist_url": url, "volume": self.vol_slider.value(),
             "ytdl_format": self.quality_map[self.quality_combo.currentText()],
+            "allow_notifications": self.notify_cb.isChecked(),
             "shuffle": self.shuffle_cb.isChecked(), "loop": self.loop_cb.isChecked(),
             "prefetch": self.prefetch_cb.isChecked(), "gapless": self.gapless_cb.isChecked(), "loudnorm": self.norm_cb.isChecked()
         }
