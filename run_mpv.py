@@ -35,6 +35,10 @@ def load_config():
     with open(CONFIG_PATH, 'r') as f: return json.load(f)
 
 def send_notification():
+    conf = load_config()
+    if not conf.get('allow_notifications', True): # Если выключено — ливаем
+        return
+
     time.sleep(5)
     last_title = ""
     while True:
@@ -49,7 +53,7 @@ def send_notification():
                     last_title = current_title
         except: pass
         time.sleep(3)
-
+        
 def run_stuff():
     conf = load_config()
     if not conf.get('playlist_url'):
