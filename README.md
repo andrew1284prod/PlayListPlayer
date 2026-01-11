@@ -12,12 +12,12 @@
 
 ---
 
-## 🚀 Установка
+## 🚀 Installation / Установка
 Arch/Arch based systems (native, pacman):
 ```bash
-git clone https://github.com/andrew1284prod/playlistplayer.git && cd playlistplayer && python setup.py
+git clone --branch installators --single-branch https://github.com/andrew1284prod/PlayListPlayer.git && cd PlayListPlayer && python setup.py
 ```
 Ubuntu/Debian based systems (native, apt) :
 ```bash
-git clone https://github.com/andrew1284prod/playlistplayer.git && cd playlistplayer && python apt_setup.py
+git clone --branch installators --single-branch https://github.com/andrew1284prod/PlayListPlayer.git && cd PlayListPlayer && python apt_setup.py
 ```
