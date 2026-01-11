@@ -13,6 +13,11 @@
 ---
 
 ## 🚀 Установка
+Arch/Arch based systems (native, pacman):
 ```bash
 git clone https://github.com/andrew1284prod/playlistplayer.git && cd playlistplayer && python setup.py
+```
+Ubuntu/Debian based systems (native, apt) :
+```bash
+git clone https://github.com/andrew1284prod/playlistplayer.git && cd playlistplayer && python apt_setup.py
 ```
