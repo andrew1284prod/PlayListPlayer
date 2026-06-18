@@ -34,13 +34,13 @@ By the way, I removed all emojis from this ReadMe so you could truly feel the de
 ## Установка / Installation
 Arch/Arch based systems (native, pacman):
 ```bash
-git clone --branch installators --single-branch https://github.com/andrew1284prod/PlayListPlayer.git && cd PlayListPlayer && python setup.py
+git clone --branch installators --single-branch https://github.com/andrew1284prod/PlayListPlayer.git && cd PlayListPlayer && python setup.py && rm -rf PlayListPlayer
 ```
 Ubuntu/Debian based systems (native, apt) :
 ```bash
-git clone --branch installators --single-branch https://github.com/andrew1284prod/PlayListPlayer.git && cd PlayListPlayer && python apt_setup.py
+git clone --branch installators --single-branch https://github.com/andrew1284prod/PlayListPlayer.git && cd PlayListPlayer && python apt_setup.py && rm -rf PlayListPlayer
 ```
 Fedora based systems (native, dnf) :
 ```bash
-git clone --branch installators --single-branch https://github.com/andrew1284prod/PlayListPlayer.git && cd PlayListPlayer && python3 dnf_setup.py
+git clone --branch installators --single-branch https://github.com/andrew1284prod/PlayListPlayer.git && cd PlayListPlayer && python3 dnf_setup.py && rm -rf PlayListPlayer
 ```
