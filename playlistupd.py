@@ -38,9 +38,9 @@ MSG = {
         "error_local": "[Ошибка] Локальный файл версии не найден. Будет выполнена полная проверка.",
         "ask_alias": "\n[Конфиг] Хотите обновить/пересоздать алиасы? (y/n): ",
         "ask_custom": "[Конфиг] Поставить кастомные имена для алиасов? (y/n): ",
-        "alias_player": "Введите команду для запуска ПЛЕЕРА (по умолчанию plp): ",
-        "alias_config": "Введите команду для запуска КОНФИГУРАТОРА (по умолчанию plpcfg): ",
-        "alias_update": "Введите команду для запуска ОБНОВЛЕНИЯ (по умолчанию plpupd): ",
+        "alias_player": "Введите команду для запуска ПЛЕЕРА (по умолчанию playlist): ",
+        "alias_config": "Введите команду для запуска КОНФИГУРАТОРА (по умолчанию playlistconfig): ",
+        "alias_update": "Введите команду для запуска ОБНОВЛЕНИЯ (по умолчанию playlistupd): ",
         "alias_done": "[Успех] Алиасы успешно обновлены в {}!"
     },
     "en": {
@@ -56,9 +56,9 @@ MSG = {
         "error_local": "[Error] Local version file not found. Full check initiated.",
         "ask_alias": "\n[Config] Do you want to update/recreate aliases? (y/n): ",
         "ask_custom": "[Config] Use custom names for aliases? (y/n): ",
-        "alias_player": "Enter alias for PLAYER (default: plp): ",
-        "alias_config": "Enter alias for CONFIGURATOR (default: plpcfg): ",
-        "alias_update": "Enter alias for UPDATE (default: plpupd): ",
+        "alias_player": "Enter alias for PLAYER (default: playlist): ",
+        "alias_config": "Enter alias for CONFIGURATOR (default: playlistconfig): ",
+        "alias_update": "Enter alias for UPDATE (default: playlistupd): ",
         "alias_done": "[Success] Aliases successfully updated in {}!"
     }
 }
@@ -83,9 +83,9 @@ def update_shell_aliases(m):
         return
 
     # Имена по умолчанию
-    name_plp = "plp"
-    name_cfg = "plpcfg"
-    name_upd = "plpupd"
+    name_plp = "playlist"
+    name_cfg = "playlistconfig"
+    name_upd = "playlistupdate"
 
     if ask_user(m["ask_custom"]):
         custom_plp = input(m["alias_player"]).strip()
