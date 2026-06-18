@@ -32,11 +32,9 @@ STRINGS = {
         "gapless": "Воспроизведение без пауз",
         "loudnorm": "Нормализация звука",
         "notifications": "Уведомления",
-        "alias_btn": "ДОБАВИТЬ АЛИАСЫ ⌨️",
-        "alias_done": "Алиасы добавлены!",
         "save": "СОХРАНИТЬ ПАРАМЕТРЫ",
-        "saved_msg": "КОНФИГУРАЦИЯ ОБНОВЛЕНА ✅",
-        "custom_btn": "ДИЗАЙН 🎨"
+        "saved_msg": "КОНФИГУРАЦИЯ ОБНОВЛЕНА",
+        "custom_btn": "ДИЗАЙН"
     },
     "en": {
         "title": "Player Configuration",
@@ -47,13 +45,11 @@ STRINGS = {
         "loop": "Loop Playlist",
         "prefetch": "Prefetching",
         "notifications": "Notifications",
-        "alias_btn": "ADD ALIASES ⌨",
-        "alias_done": "Aliases added!",
         "gapless": "Gapless Playback",
         "loudnorm": "Loudness Normalization",
         "save": "SAVE CONFIGURATION",
-        "saved_msg": "CONFIGURATION UPDATED ✅",
-        "custom_btn": "DESIGN 🎨"
+        "saved_msg": "CONFIGURATION UPDATED",
+        "custom_btn": "DESIGN"
     }
 }
 
@@ -85,7 +81,7 @@ class ModernConfigApp(QWidget):
         self.anim_step = 0.0
         
         self.setWindowTitle("Playlist Player Settings")
-        self.setFixedSize(520, 700)
+        self.setFixedSize(520, 600)
         self.setWindowOpacity(0.94) # Установка прозрачности окна
 
         self.load_custom_config()
@@ -215,14 +211,7 @@ class ModernConfigApp(QWidget):
 
         self.main_layout.addStretch()
 
-        #Говно под названием алиас сука
-        self.alias_btn = QPushButton()
-        self.alias_btn.clicked.connect(self.add_aliases)
-        self.main_layout.addWidget(self.alias_btn)
-
-        self.alias_hint = QLabel("plpcfg, plp, plpupd")
-        self.alias_hint.setStyleSheet("color: rgba(255,255,255,0.3); font-size: 9px;")
-        self.main_layout.addWidget(self.alias_hint, alignment=Qt.AlignmentFlag.AlignCenter)
+        #Говно под названием алиас было удалено, вот тебе нахуй, иди лезь в playlistupd, там уже кастомные алиасы
 
         # Футер (Автор слева, Версия справа)
         footer_layout = QHBoxLayout()
@@ -284,7 +273,6 @@ class ModernConfigApp(QWidget):
         self.notify_cb.setText(s["notifications"]) # Добавь это!
         self.save_btn.setText(s["save"])
         self.custom_btn.setText(s["custom_btn"])
-        self.alias_btn.setText(s["alias_btn"]) # И это!
 
     def change_lang(self, index): 
         self.lang = "ru" if index == 0 else "en"
