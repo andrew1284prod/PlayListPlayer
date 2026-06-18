@@ -10,7 +10,7 @@ def get_sys_lang():
     try:
         lang = locale.getlocale()[0]
         return lang[:2] if lang else "en"
-    except:
+    except Exception:
         return "en"
 
 LANG = get_sys_lang()
@@ -23,6 +23,9 @@ MSG = {
         "installing": "[Процесс] Копирование файлов и настройка окружения...",
         "downloading": "[Сеть] Файл {} не найден. Скачиваю из репозитория...",
         "alias": "[Конфиг] Настройка алиасов в {}...",
+        "cleanup_start": "[Очистка] Удаление временных файлов репозитория...",
+        "cleanup_file": "[Очистка] Удален мусорный файл: {}",
+        "cleanup_dir": "[Очистка] Удалена мусорная папка: {}",
         "done": "[Успех] Установка завершена! Перезапустите терминал.",
         "error": "[Ошибка] Произошел сбой: {}"
     },
@@ -34,12 +37,14 @@ MSG = {
         "installing": "[Process] Copying files and configuring environment...",
         "downloading": "[Network] File {} not found. Downloading from repository...",
         "alias": "[Config] Setting up aliases in {}...",
+        "cleanup_start": "[Cleanup] Removing temporary repository files...",
+        "cleanup_file": "[Cleanup] Removed junk file: {}",
+        "cleanup_dir": "[Cleanup] Removed junk directory: {}",
         "done": "[Success] Setup complete! Please restart your terminal.",
         "error": "[Error] Something went wrong: {}"
     }
 }
 
-# Имена пакетов адаптированы под официальные репозитории Fedora
 REQUIRED_PACKAGES = ["mpv", "yt-dlp", "tmux", "cava", "socat", "python3-pyqt6", "zenity", "python3-tkinter"]
 REPO_URL = "https://raw.githubusercontent.com/andrew1284prod/PlayListPlayer/main/"
 
@@ -61,7 +66,6 @@ def check_and_install_deps():
     m = MSG[LANG]
     missing = []
     for pkg in REQUIRED_PACKAGES:
-        # Для Fedora/RPM используется rpm -q для проверки установленного пакета
         check = subprocess.run(["rpm", "-q", pkg], capture_output=True, text=True)
         if check.returncode != 0:
             missing.append(pkg)
@@ -69,7 +73,6 @@ def check_and_install_deps():
     if missing:
         ans = input(m["pkg_missing"].format(", ".join(missing))).lower()
         if ans in ['y', 'yes', 'д', 'да']:
-            # Используем dnf вместо pacman
             subprocess.run(["sudo", "dnf", "install", "-y"] + missing)
         else:
             print("[!] Установка прервана: отсутствуют зависимости.")
@@ -79,7 +82,7 @@ def select_directory_native():
     if shutil.which("zenity"):
         try:
             return subprocess.check_output(["zenity", "--file-selection", "--directory", "--title=Путь установки"], text=True).strip()
-        except:
+        except Exception:
             return None
     return input("Введите путь вручную: ").strip()
 
@@ -106,13 +109,12 @@ def run_setup():
         current_dir = os.path.dirname(os.path.abspath(__file__))
         files = ["gui_config.py", "run_mpv.py", "playlistupd.py", "version.json"]
 
-        # Проверяем/качаем файлы перед копированием
         ensure_files(current_dir, files)
 
         for f in files:
             shutil.copy2(os.path.join(current_dir, f), os.path.join(target_path, f))
 
-        # 4. Алиасы
+        # 4. Алиасы с фиксом пробелов (одинарные кавычки внутри двойных)
         shell_path = os.environ.get("SHELL", "")
         rc_file = os.path.expanduser("~/.zshrc" if "zsh" in shell_path else "~/.bashrc")
 
@@ -120,9 +122,9 @@ def run_setup():
             print(m["alias"].format(rc_file))
             alias_data = (
                 f'\n# PlaylistPlayer\n'
-                f'alias playlist="python3 {os.path.join(target_path, "run_mpv.py")}"\n'
-                f'alias playlistconfig="python3 {os.path.join(target_path, "gui_config.py")}"\n'
-                f'alias playlistupd="python3 {os.path.join(target_path, "playlistupd.py")}"\n'
+                f'alias playlist="python3 \'{os.path.join(target_path, "run_mpv.py")}\'"\n'
+                f'alias playlistconfig="python3 \'{os.path.join(target_path, "gui_config.py")}\'"\n'
+                f'alias playlistupd="python3 \'{os.path.join(target_path, "playlistupd.py")}\'"\n'
             )
             with open(rc_file, "r") as f:
                 content = f.read()
@@ -130,8 +132,31 @@ def run_setup():
                     with open(rc_file, "a") as fa:
                         fa.write(alias_data)
 
-        print("-" * 40)
-        print(m["done"])
+        # 5. Очистка склонированного репозитория с логами
+        # Запускаем очистку только если папка установки НЕ совпадает с текущей папкой скрипта
+        if os.path.abspath(target_path) != os.path.abspath(current_dir):
+            print(m["cleanup_start"])
+
+            # Удаляем .git, если он есть
+            git_dir = os.path.join(current_dir, ".git")
+            if os.path.exists(git_dir):
+                shutil.rmtree(git_dir)
+                print(m["cleanup_dir"].format(".git"))
+
+            # Скрипт пытается удалить сам себя после завершения
+            setup_script = os.path.abspath(__file__)
+
+            print("-" * 40)
+            print(m["done"])
+
+            if os.path.exists(setup_script):
+                print(m["cleanup_file"].format(os.path.basename(setup_script)))
+                # Финальный аккорд: удаляем файл dnf_setup.py
+                os.remove(setup_script)
+        else:
+            print("-" * 40)
+            print(m["done"])
+
     except Exception as e:
         print(m["error"].format(e))
 
