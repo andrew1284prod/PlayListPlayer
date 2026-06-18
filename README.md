@@ -40,7 +40,7 @@ Ubuntu/Debian based systems (native, apt) :
 ```bash
 git clone --branch installators --single-branch https://github.com/andrew1284prod/PlayListPlayer.git && cd PlayListPlayer && python apt_setup.py
 ```
-Fedora based systems (unstable, dnf) :
+Fedora based systems (native, dnf) :
 ```bash
 git clone --branch installators --single-branch https://github.com/andrew1284prod/PlayListPlayer.git && cd PlayListPlayer && python3 dnf_setup.py
 ```
