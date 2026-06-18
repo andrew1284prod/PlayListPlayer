@@ -10,29 +10,36 @@ def get_sys_lang():
     try:
         lang = locale.getlocale()[0]
         return lang[:2] if lang else "en"
-    except: return "en"
+    except Exception: 
+        return "en"
 
 LANG = get_sys_lang()
 MSG = {
     "ru": {
-        "start": "[Установка] Инициализация Playlist Player...",
+        "start": "[Установка] Инициализация Playlist Player для Arch Linux...",
         "check_pkg": "[Система] Проверка необходимых пакетов...",
         "pkg_missing": "[Внимание] Отсутствуют пакеты: {}. Установить? (y/n): ",
         "dir_select": "[Интерфейс] Выберите директорию для установки в открывшемся окне...",
         "installing": "[Процесс] Копирование файлов и настройка окружения...",
         "downloading": "[Сеть] Файл {} не найден. Скачиваю из репозитория...",
         "alias": "[Конфиг] Настройка алиасов в {}...",
+        "cleanup_start": "[Очистка] Удаление временных файлов репозитория...",
+        "cleanup_file": "[Очистка] Удален мусорный файл: {}",
+        "cleanup_dir": "[Очистка] Удалена мусорная папка: {}",
         "done": "[Успех] Установка завершена! Перезапустите терминал.",
         "error": "[Ошибка] Произошел сбой: {}"
     },
     "en": {
-        "start": "[Setup] Initializing Playlist Player...",
+        "start": "[Setup] Initializing Playlist Player for Arch Linux...",
         "check_pkg": "[System] Checking dependencies...",
         "pkg_missing": "[Warning] Missing packages: {}. Install? (y/n): ",
         "dir_select": "[UI] Select installation directory in the dialog window...",
         "installing": "[Process] Copying files and configuring environment...",
         "downloading": "[Network] File {} not found. Downloading from repository...",
         "alias": "[Config] Setting up aliases in {}...",
+        "cleanup_start": "[Cleanup] Removing temporary repository files...",
+        "cleanup_file": "[Cleanup] Removed junk file: {}",
+        "cleanup_dir": "[Cleanup] Removed junk directory: {}",
         "done": "[Success] Setup complete! Please restart your terminal.",
         "error": "[Error] Something went wrong: {}"
     }
@@ -75,7 +82,8 @@ def select_directory_native():
     if shutil.which("zenity"):
         try:
             return subprocess.check_output(["zenity", "--file-selection", "--directory", "--title=Путь установки"], text=True).strip()
-        except: return None
+        except Exception: 
+            return None
     return input("Введите путь вручную: ").strip()
 
 def run_setup():
@@ -89,7 +97,8 @@ def run_setup():
     # 2. Выбор папки
     print(m["dir_select"])
     target_path = select_directory_native()
-    if not target_path: return
+    if not target_path: 
+        return
 
     # 3. Установка
     try:
@@ -100,13 +109,12 @@ def run_setup():
         current_dir = os.path.dirname(os.path.abspath(__file__))
         files = ["gui_config.py", "run_mpv.py", "playlistupd.py", "version.json"]
         
-        # САМЫЙ ВАЖНЫЙ МОМЕНТ: Проверяем/качаем файлы перед копированием
         ensure_files(current_dir, files)
         
         for f in files:
             shutil.copy2(os.path.join(current_dir, f), os.path.join(target_path, f))
 
-        # 4. Алиасы
+        # 4. Алиасы с экранированием пробелов
         shell_path = os.environ.get("SHELL", "")
         rc_file = os.path.expanduser("~/.zshrc" if "zsh" in shell_path else "~/.bashrc")
         
@@ -114,9 +122,9 @@ def run_setup():
             print(m["alias"].format(rc_file))
             alias_data = (
                 f'\n# PlaylistPlayer\n'
-                f'alias playlist="python3 {os.path.join(target_path, "run_mpv.py")}"\n'
-                f'alias playlistconfig="python3 {os.path.join(target_path, "gui_config.py")}"\n'
-                f'alias playlistupd="python3 {os.path.join(target_path, "playlistupd.py")}"\n'
+                f'alias playlist="python3 \'{os.path.join(target_path, "run_mpv.py")}\'"\n'
+                f'alias playlistconfig="python3 \'{os.path.join(target_path, "gui_config.py")}\'"\n'
+                f'alias playlistupd="python3 \'{os.path.join(target_path, "playlistupd.py")}\'"\n'
             )
             with open(rc_file, "r") as f:
                 content = f.read()
@@ -124,8 +132,29 @@ def run_setup():
                     with open(rc_file, "a") as fa:
                         fa.write(alias_data)
 
-        print("-" * 40)
-        print(m["done"])
+        # 5. Очистка репозитория после клонирования
+        if os.path.abspath(target_path) != os.path.abspath(current_dir):
+            print(m["cleanup_start"])
+            
+            # Удаляем .git со всей тяжелой историей
+            git_dir = os.path.join(current_dir, ".git")
+            if os.path.exists(git_dir):
+                shutil.rmtree(git_dir)
+                print(m["cleanup_dir"].format(".git"))
+                
+            setup_script = os.path.abspath(__file__)
+            
+            print("-" * 40)
+            print(m["done"])
+            
+            # Самоликвидация скрипта установки
+            if os.path.exists(setup_script):
+                print(m["cleanup_file"].format(os.path.basename(setup_script)))
+                os.remove(setup_script)
+        else:
+            print("-" * 40)
+            print(m["done"])
+
     except Exception as e:
         print(m["error"].format(e))
 
