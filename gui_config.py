@@ -115,9 +115,9 @@ class ModernConfigApp(QWidget):
     def add_aliases(self):
         shell_rc = os.path.expanduser("~/.zshrc") if "zsh" in os.environ.get("SHELL", "") else os.path.expanduser("~/.bashrc")
         aliases = {
-            "plpcfg": f"python3 {os.path.join(ROOT_DIR, 'gui_config.py')}",
-            "plp": f"python3 {os.path.join(ROOT_DIR, 'run_mpv.py')}",
-            "plpupd": f"python3 {os.path.join(ROOT_DIR, 'playlistupd.py')}"
+            "plpcfg": f"python3 '{os.path.join(ROOT_DIR, 'gui_config.py')}'",
+            "plp": f"python3 '{os.path.join(ROOT_DIR, 'run_mpv.py')}'",
+            "plpupd": f"python3 '{os.path.join(ROOT_DIR, 'playlistupd.py')}'"
         }
         
         try:
